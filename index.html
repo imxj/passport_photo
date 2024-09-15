@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Passport Photo App</title>
+    <style>
+        /* CSS Styles */
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        #camera-container {
+            position: relative;
+            display: inline-block;
+            width: 640px;
+            height: 480px;
+            margin-bottom: 20px;
+        }
+
+        #video, #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 640px;
+            height: 480px;
+        }
+
+        #capture-btn, #generate-grid-btn, #download-btn {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        #photo-output, #print-grid {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Passport Photo Capture</h1>
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+    <br>
+    <button id="capture-btn">Capture Photo</button>
+    <canvas id="photo-output"></canvas>
+    <br><br>
+    <button id="generate-grid-btn">Generate Print Grid</button>
+    <button id="download-btn">Download Print Grid</button>
+    <canvas id="print-grid"></canvas>
+
+    <!-- Add the following lines -->
+    <div id="instructions" style="margin-top: 30px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; background-color: #f8f8f8; padding: 20px; border-radius: 5px;">
+        <h3 style="margin-top: 0; color: #333;">Printing Instructions:</h3>
+        <ol style="color: #555; line-height: 1.6;">
+            <li>Download the generated photo grid image.</li>
+            <li>Print the image at a local photo center (e.g., CVS, Walgreens) or using a high-quality home printer.</li>
+            <li>Ensure the print settings maintain the original image size and quality.</li>
+            <li>Once printed, carefully cut out individual passport photos along the grid lines.</li>
+            <li>Double-check that the cut photos meet the required passport photo dimensions.</li>
+        </ol>
+        <p style="color: #666; font-style: italic; margin-top: 15px;">Note: The quality of your passport photos depends on your camera and printing method. For best results, we recommend using a professional printing service.</p>
+    </div>
+
+    <p id="privacy-notice" style="margin-top: 20px; font-size: 14px; color: #666;">
+        Privacy Notice: We do not save or upload your captured photos. 
+        All processing is done locally in your browser.
+    </p>
+
+    <script>
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const overlayCtx = overlay.getContext('2d');
+        const guideImage = new Image();
+        const captureBtn = document.getElementById('capture-btn');
+        const photoOutput = document.getElementById('photo-output');
+        const photoCtx = photoOutput.getContext('2d');
+        const generateGridBtn = document.getElementById('generate-grid-btn');
+        const printGrid = document.getElementById('print-grid');
+        const printCtx = printGrid.getContext('2d');
+        const downloadBtn = document.getElementById('download-btn');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+
+                video.addEventListener('loadedmetadata', () => {
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
+                    overlayCtx.drawImage(guideImage, 0, 0, overlay.width, overlay.height);
+                });
+            })
+            .catch(err => {
+                console.error("Error accessing the camera: ", err);
+            });
+
+        guideImage.src = 'guide.png';
+        guideImage.onload = () => {
+            if (video.videoWidth) {
+                overlay.width = video.videoWidth;
+                overlay.height = video.videoHeight;
+                overlayCtx.drawImage(guideImage, 0, 0, overlay.width, overlay.height);
+            }
+        };
+
+        function cropToPassportSize() {
+            const cropWidth = 600;
+            const cropHeight = 600;
+            const sx = (photoOutput.width - cropWidth) / 2;
+            const sy = (photoOutput.height - cropHeight) / 2;
+
+            const croppedImage = photoCtx.getImageData(sx, sy, cropWidth, cropHeight);
+            photoOutput.width = cropWidth;
+            photoOutput.height = cropHeight;
+            photoCtx.putImageData(croppedImage, 0, 0);
+        }
+
+        captureBtn.addEventListener('click', () => {
+            photoOutput.width = video.videoWidth;
+            photoOutput.height = video.videoHeight;
+            photoCtx.drawImage(video, 0, 0, photoOutput.width, photoOutput.height);
+            cropToPassportSize();
+            photoOutput.style.display = 'block'; // Add this line
+        });
+
+        generateGridBtn.addEventListener('click', () => {
+            const dpi = 300;
+            const inchToPixel = dpi;
+            const photoSize = 2 * inchToPixel;
+            const margin = 0.25 * inchToPixel; // 0.25 inch margin
+
+            const printWidthInches = 5;
+            const printHeightInches = 7;
+
+            const printWidth = printWidthInches * inchToPixel;
+            const printHeight = printHeightInches * inchToPixel;
+
+            printGrid.width = printWidth;
+            printGrid.height = printHeight;
+
+            const photosPerRow = Math.floor((printWidth - margin) / (photoSize + margin));
+            const photosPerColumn = Math.floor((printHeight - margin) / (photoSize + margin));
+
+            const totalWidthUsed = photosPerRow * photoSize + (photosPerRow - 1) * margin;
+            const totalHeightUsed = photosPerColumn * photoSize + (photosPerColumn - 1) * margin;
+            const leftMargin = (printWidth - totalWidthUsed) / 2;
+            const topMargin = (printHeight - totalHeightUsed) / 2;
+
+            printCtx.fillStyle = 'white';
+            printCtx.fillRect(0, 0, printWidth, printHeight);
+
+            for (let i = 0; i < photosPerColumn; i++) {
+                for (let j = 0; j < photosPerRow; j++) {
+                    const x = leftMargin + j * (photoSize + margin);
+                    const y = topMargin + i * (photoSize + margin);
+                    printCtx.drawImage(
+                        photoOutput,
+                        x,
+                        y,
+                        photoSize,
+                        photoSize
+                    );
+                }
+            }
+
+            printGrid.style.display = 'block';
+            downloadBtn.style.display = 'inline-block';
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'passport_photos.png';
+            link.href = printGrid.toDataURL();
+            link.click();
+        });
+
+
+    </script>
+</body>
+
+</html>
