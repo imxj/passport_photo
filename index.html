@@ -1,312 +1,365 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <title>DIY Passport Photos</title>
-    <style>
-        /* CSS Styles */
-
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-        }
-
-        #camera-container {
-            position: relative;
-            display: inline-block;
-            width: 640px;
-            height: 480px;
-            margin-bottom: 20px;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-        }
-
-        #video,
-        #output-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 640px;
-            height: 480px;
-            object-fit: cover;
-        }
-
-        #capture-btn,
-        #generate-grid-btn,
-        #download-btn {
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-
-        #photo-output,
-        #print-grid {
-            display: none;
-        }
-    </style>
-    <!-- MediaPipe Selfie Segmentation -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
-    <!-- MediaPipe Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no" />
+	<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"
+		crossorigin="anonymous"></script>
+	<meta name="keywords" content="passport, photo, webcam, free, privacy, browser" />
+	<meta name="description" content="Take your own passport photo in the browser" />
+	<meta property="og:title" content="DIY Passport Photo" />
+	<meta property="og:description" content="DIY your own passport photo in the browser" />
+	<title>DIY Passport Photo</title>
 </head>
+<style>
+	html,
+	body {
+		padding: 0;
+		margin: 0;
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	}
+
+	.canvas_container {
+		margin: 0 auto;
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-repeat: no-repeat;
+		background-position: center;
+		background-size: 100%;
+	}
+
+	.preview_image {
+		width: auto;
+		height: 75%;
+		box-shadow: 0px 1px 20px rgba(0, 0, 0, 0.3);
+	}
+
+	.controls {
+		position: absolute;
+		bottom: 0;
+		width: 100%;
+		padding: 10px 0 10px;
+		background-color: rgba(0, 0, 0, 0.3);
+		display: flex;
+		justify-content: space-around;
+	}
+
+	.controls button {
+		width: 75px;
+		height: 75px;
+		border-radius: 50%;
+		border: none;
+		box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.3);
+		overflow: hidden;
+		background-color: white;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	.start {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/check_black_24dp.png);
+	}
+
+	.mirror {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/swap_horiz_black_24dp.png);
+	}
+
+	.capture {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/photo_camera_black_24dp.png);
+	}
+
+	.flip {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/flip_camera_ios_black_24dp.png);
+	}
+
+	.retake {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/arrow_back_black_24dp.png);
+	}
+
+	.download {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/file_download_black_24dp.png);
+	}
+
+	.print5x7 {
+		background-image: url(https://www.gstatic.com/images/icons/material/system_gm/2x/print_black_24dp.png);
+	}
+
+	.step-capture,
+	.step-download {
+		display: none;
+	}
+</style>
 
 <body>
-    <h1>DYI Passport Photos</h1>
-    <div id="camera-container">
-        <video id="video" autoplay playsinline></video>
-        <canvas id="output-canvas"></canvas>
-    </div>
-    <br>
-    <button id="capture-btn">Capture Photo</button>
-    <canvas id="photo-output"></canvas>
-    <br><br>
-    <button id="generate-grid-btn">Generate Print Grid</button>
-    <button id="download-btn">Download Print Grid</button>
-    <canvas id="print-grid"></canvas>
+	<div class="canvas_container">
+		<div class="step-intro" style="padding: 0 10px 0 10px">
+			<h1>DIY Passport Photo</h1>
+			<p>Take your own passport photo in the browser.</p>
+			<img src="./passport-mask.png"
+				style="float:right;border:5px solid white;box-shadow:0px 0px 3px rgba(0,0,0,0.3);" width="100"
+				height="100" />
+			<ul>
+				<li>No uploads</li>
+				<li>No downloads</li>
+				<li>No installs</li>
+				<li>No accounts</li>
+				<li>No tracking</li>
+			</ul>
+			<p>
+				This app respects your privacy. Webcam image is processed and saved locally.
+			</p>
+		</div>
+		<canvas class="output_canvas step-capture"></canvas>
+		<img class="preview_image step-download" />
+	</div>
+	<div class="controls">
+		<button class="start step-intro" title="Start"></button>
+		<button class="mirror step-capture" title="Mirror"></button>
+		<button class="capture step-capture" title="Capture"></button>
+		<button class="flip step-capture" title="Flip"></button>
+		<button class="meta_info step-download" style="visibility: hidden;"></button>
+		<button class="retake step-download" title="Retake"></button>
+		<button class="print5x7 step-download" title="Print 5x7"></button>
+        <button class="download step-download" title="Download"></button>
+	</div>
+	<script>
+		const canvasContainer = document.getElementsByClassName('canvas_container')[0];
+		const canvasElement = document.getElementsByClassName('output_canvas')[0];
+		const previewElement = document.getElementsByClassName('preview_image')[0];
+		const startEl = document.getElementsByClassName('start')[0];
+		const mirrorEl = document.getElementsByClassName('mirror')[0];
+		const flipEl = document.getElementsByClassName('flip')[0];
+		const captureEl = document.getElementsByClassName('capture')[0];
+		const retakeEl = document.getElementsByClassName('retake')[0];
+		const downloadEl = document.getElementsByClassName('download')[0];
+		const print5x7El = document.getElementsByClassName('print5x7')[0];
+		const meta_info = document.getElementsByClassName('meta_info')[0];
+		const canvasCtx = canvasElement.getContext('2d');
+		const facingMode = ['user', 'environment'];
+		let camera, video, mirrored = false;
+		let facingModeIndex = 0;
+		let downloadFn;
+		let videoWidth, videoHeight, videoRatio;
+		let smallestWindowDimension = Math.min(window.innerWidth, window.innerHeight);
 
-    <!-- Add the following lines -->
-    <div id="instructions"
-        style="margin-top: 30px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; background-color: #f8f8f8; padding: 20px; border-radius: 5px;">
-        <h3 style="margin-top: 0; color: #333;">Printing Instructions:</h3>
-        <ol style="color: #555; line-height: 1.6;">
-            <li>Download the generated photo grid image.</li>
-            <li>Print the image at a local photo center (e.g., CVS, Walgreens) or using a high-quality home printer.
-            </li>
-            <li>Ensure the print settings maintain the original image size and quality.</li>
-            <li>Once printed, carefully cut out individual passport photos along the grid lines.</li>
-            <li>Double-check that the cut photos meet the required passport photo dimensions.</li>
-        </ol>
-        <p style="color: #666; font-style: italic; margin-top: 15px;">Note: The quality of your passport photos depends
-            on your camera and printing method. For best results, we recommend using a professional printing service.
-        </p>
-    </div>
+		function hide(el) { el.style.display = 'none'; }
+		function show(el) { el.style.display = 'block'; }
 
-    <p id="privacy-notice" style="margin-top: 20px; font-size: 14px; color: #666;">
-        Privacy Notice: We do not save or upload your captured photos.
-        All processing is done locally in your browser.
-    </p>
+		startEl.addEventListener('click', () => {
+			start();
+		});
 
-    <script>
-        const video = document.getElementById('video');
-        const outputCanvas = document.getElementById('output-canvas');
-        const outputCtx = outputCanvas.getContext('2d');
-        const captureBtn = document.getElementById('capture-btn');
-        const photoOutput = document.getElementById('photo-output');
-        const photoCtx = photoOutput.getContext('2d');
-        const generateGridBtn = document.getElementById('generate-grid-btn');
-        const printGrid = document.getElementById('print-grid');
-        const printCtx = printGrid.getContext('2d');
-        const downloadBtn = document.getElementById('download-btn');
-        const cameraContainer = document.getElementById('camera-container');
+		mirrorEl.addEventListener('click', () => {
+			if (mirrored) {
+				mirrored = false;
+				canvasElement.style.transform = 'none';
+			} else {
+				mirrored = true;
+				canvasElement.style.transform = 'scaleX(-1)';
+			}
+		});
 
-        // Initialize MediaPipe Selfie Segmentation
-        const selfieSegmentation = new SelfieSegmentation({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
-            }
-        });
+		flipEl.addEventListener('click', () => {
+			stopCamera();
+			facingModeIndex = (facingModeIndex + 1) % facingMode.length;
+			startCamera();
+		});
 
-        selfieSegmentation.setOptions({
-            modelSelection: 1, // 0 for general, 1 for landscape (selfie)
-        });
+		retakeEl.addEventListener('click', () => {
+			startCamera();
+			document.querySelectorAll('.step-download').forEach(hide);
+			document.querySelectorAll('.step-capture').forEach(show);
+			canvasContainer.style.backgroundImage = 'url(./passport-mask.png)';
+			downloadEl.removeEventListener('click', downloadFn);
+		});
 
-        selfieSegmentation.onResults(onResults);
+		captureEl.addEventListener('click', function () {
+			let seconds = 3;
+			let interval = 0;
 
-        async function onResults(results) {
-            // Draw the segmentation mask on the output canvas
-            outputCtx.save();
-            outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+			captureEl.disabled = true;
+			const timer = document.createElement('div');
+			timer.style = `position:absolute;font-size:160px;color:white;top:${smallestWindowDimension / 2}px;margin-top:-80px;text-align:center;width:100%;`;
+			timer.textContent = seconds;
+			document.body.appendChild(timer);
 
-            // Only proceed if segmentation mask is available
-            if (results.segmentationMask) {
-                // Draw the video frame
-                outputCtx.drawImage(
-                    results.image,
-                    0,
-                    0,
-                    outputCanvas.width,
-                    outputCanvas.height
-                );
+			const countdown = function () {
+				seconds -= 1;
+				timer.textContent = seconds;
+				if (seconds === 0) {
+					takePhoto();
+					window.clearInterval(interval);
+					timer.remove();
+					captureEl.disabled = false;
+				}
+			}
+			interval = window.setInterval(countdown, 1000);
+		});
 
-                // Set composite mode to 'destination-in' to keep only the foreground
-                outputCtx.globalCompositeOperation = 'destination-in';
-                outputCtx.drawImage(
-                    results.segmentationMask,
-                    0,
-                    0,
-                    outputCanvas.width,
-                    outputCanvas.height
-                );
+		window.onresize = () => {
+			smallestWindowDimension = Math.min(window.innerWidth, window.innerHeight);
+			resizeOutput();
+		}
 
-                // Change composite mode to 'destination-over' to place background behind the foreground
-                outputCtx.globalCompositeOperation = 'destination-over';
-                outputCtx.fillStyle = '#FFFFFF'; // Background color (white)
-                outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-            }
-            outputCtx.restore();
-        }
+		function takePhoto() {
+			const outputSize = 600;
+			const img = new Image();
 
-        // Start video and processing
-        async function startVideo() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            video.onloadedmetadata = async () => {
-                video.play();
-                outputCanvas.width = video.videoWidth;
-                outputCanvas.height = video.videoHeight;
-                // Start processing frames
-                await sendFrame();
+			img.onload = function () {
+				const imageHeight = img.height;
+				const imageWidth = img.width;
+				canvasElement.height = outputSize;
+				canvasElement.width = outputSize;
+				canvasCtx.save(); // save canvas transform state before doing horizontal flip
+				canvasCtx.clearRect(0, 0, outputSize, outputSize); // reset canvas
+				canvasCtx.rect(0, 0, outputSize, outputSize); // paint white background so it's not transparent
+				canvasCtx.fillStyle = 'white';
+				canvasCtx.fill();
+				if (mirrored) {
+					canvasCtx.translate(outputSize, 0);
+					canvasCtx.scale(-1, 1);
+				}
+				canvasCtx.drawImage(img, (imageWidth - imageHeight) / 2, 0, imageHeight, imageHeight, 0, 0, outputSize, outputSize);
+				canvasCtx.restore();
+				const dataURL = canvasElement.toDataURL();
+				previewElement.src = dataURL;
+				resizeOutput();
+				document.querySelectorAll('.step-download').forEach(show);
+				document.querySelectorAll('.step-capture').forEach(hide);
+				canvasContainer.style.backgroundImage = 'none';
+				stopCamera();
+				downloadFn = function () { download(dataURL) };
+				downloadEl.addEventListener('click', downloadFn);
+			}
+			img.src = canvasElement.toDataURL();
+		}
 
-            };
-        }
-        // Draw the guide overlay
-        function drawGuide() {
-            outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+		function download(url) {
+			const a = document.createElement('a')
+			a.href = url;
+			a.download = 'webcam-passport-photo';
+			document.body.appendChild(a)
+			a.click()
+			document.body.removeChild(a)
+		}
 
-            // Set the style for the guide (e.g., semi-transparent rectangle)
-            outputCtx.strokeStyle = 'rgba(0, 255, 0, 0.8)'; // Green color with some transparency
-            outputCtx.lineWidth = 4;
+		function resizeOutput() {
+			canvasElement.style.height = `${smallestWindowDimension}px`;
+			canvasElement.style.width = `${smallestWindowDimension * videoRatio}px`;
 
-            // Draw an oval to indicate head position
-            const centerX = outputCanvas.width / 2;
-            const centerY = outputCanvas.height / 2 - 60;
-            const radiusX = outputCanvas.width / 4; // Adjust as needed
-            const radiusY = outputCanvas.height / 3; // Adjust as needed
+			canvasContainer.style.width = `${smallestWindowDimension}px`;
+			canvasContainer.style.height = `${smallestWindowDimension}px`;
 
-            outputCtx.beginPath();
-            outputCtx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-            outputCtx.stroke();
+			canvasElement.height = videoHeight;
+			canvasElement.width = videoWidth;
+		}
 
-            // Optional: Add horizontal line to indicate eye level
-            outputCtx.beginPath();
-            outputCtx.moveTo(centerX - radiusX / 2, centerY);
-            outputCtx.lineTo(centerX + radiusX / 2, centerY);
-            outputCtx.stroke();
-        }
+		function onResults(results) {
+			canvasCtx.save();
+			canvasCtx.clearRect(0, 0, videoWidth, videoHeight);
+			canvasCtx.drawImage(results.segmentationMask, 0, 0,
+				videoWidth, videoHeight);
 
-        async function sendFrame() {
-            await selfieSegmentation.send({ image: video });
-            requestAnimationFrame(sendFrame);
-        }
+			// Only overwrite existing pixels.
+			canvasCtx.globalCompositeOperation = 'source-in';
+			canvasCtx.drawImage(
+				results.image, 0, 0, videoWidth, videoHeight);
 
-        startVideo();
+			canvasCtx.restore();
+		}
 
-        // Capture the photo
-        captureBtn.addEventListener('click', () => {
-            photoOutput.width = outputCanvas.width;
-            photoOutput.height = outputCanvas.height;
-            photoCtx.drawImage(outputCanvas, 0, 0, photoOutput.width, photoOutput.height);
-            cropToPassportSize();
-            photoOutput.style.display = 'block';
-        });
+		const selfieSegmentation = new SelfieSegmentation({
+			locateFile: (file) => {
+				return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+			}
+		});
+		selfieSegmentation.setOptions({
+			selfieMode: true,
+			modelSelection: 0,
+		});
+		selfieSegmentation.onResults(onResults);
 
-        function cropToPassportSize() {
-            const dpi = 300;
-            const inchToPixel = dpi;
-            const cropWidth = 2 * inchToPixel;
-            const cropHeight = 2 * inchToPixel;
-            // width >= height
-            let sx = (photoOutput.width - photoOutput.height) / 2;
-            let sy = 0;
+		function startCamera() {
+			const mode = facingMode[facingModeIndex];
+			video = document.createElement('video');
+			video.setAttribute('playsinline', 'true');
+			let firstFrame = true;
+			camera = new Camera(video, {
+				onFrame: async () => {
+					if (firstFrame) {
+						firstFrame = false;
+						videoWidth = video.videoWidth;
+						videoHeight = video.videoHeight;
+						videoRatio = videoWidth / videoHeight;
+						canvasContainer.style.backgroundImage = 'url(./passport-mask.png)';
+						resizeOutput();
+						meta_info.textContent = `${mode}, ${video.videoWidth}, ${video.videoHeight}`;
+					}
+					await selfieSegmentation.send({ image: video });
+				},
+				facingMode: mode,
+				width: 720,
+				height: 720
+			});
+			camera.start();
+		}
 
-            // Create a temporary canvas for the cropped image
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = cropWidth;
-            tempCanvas.height = cropHeight;
-            const tempCtx = tempCanvas.getContext('2d');
+		function stopCamera() {
+			camera && camera.stop();
+			video && video.remove();
+		}
 
-            // // Draw the cropped portion onto the temporary canvas
-            // tempCtx.drawImage(
-            //     photoOutput,
-            //     sx, sourceY, adjustedCropHeight, adjustedCropHeight,
-            //     0, -Math.min(sy, 0), cropWidth, cropWidth
-            // );
-            // Draw the cropped portion onto the temporary canvas
-            tempCtx.drawImage(
-                photoOutput,
-                sx, sy, photoOutput.height, photoOutput.height,
-                0, 0, cropWidth, cropWidth
-            );
+		function start() {
+			startCamera();
+			document.querySelectorAll('.step-capture').forEach(show);
+			document.querySelectorAll('.step-intro').forEach(hide);
+		}
 
-            // Resize the photoOutput canvas to 600x600
-            photoOutput.width = cropWidth;
-            photoOutput.height = cropHeight;
+		// New Function to Create 5x7 inch Photo with Passport Size Images
+		print5x7El.addEventListener('click', () => {
+			const printCanvas = document.createElement('canvas');
+			const printCanvasCtx = printCanvas.getContext('2d');
 
-            // Draw the cropped and resized image onto the photoOutput canvas
-            photoCtx.drawImage(tempCanvas, 0, 0, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-        }
+			// Set canvas size to 5x7 inches at 300 DPI
+			printCanvas.width = 1500; // 5 inches * 300 DPI
+			printCanvas.height = 2100; // 7 inches * 300 DPI
 
-        // Generate the print grid
-        generateGridBtn.addEventListener('click', () => {
-            const dpi = 300;
-            const inchToPixel = dpi;
-            const photoSize = 2 * inchToPixel;
-            const margin = 0.25 * inchToPixel; // 0.25 inch margin
+			// Load the captured photo
+			const img = new Image();
+			img.onload = () => {
+				// Draw the passport photos (2x2 inches, 600x600 pixels each at 300 DPI)
+				const photoSize = 600;
+				const padding = 30; // Add some padding between photos
+				let x = padding, y = padding;
 
-            const printWidthInches = 5;
-            const printHeightInches = 7;
+				for (let i = 0; i < 6; i++) { // Fit 6 passport photos
+					if (x + photoSize + padding > printCanvas.width) {
+						x = padding;
+						y += photoSize + padding;
+					}
 
-            const printWidth = printWidthInches * inchToPixel;
-            const printHeight = printHeightInches * inchToPixel;
+					printCanvasCtx.drawImage(img, x, y, photoSize, photoSize);
+					x += photoSize + padding;
+				}
 
-            printGrid.width = printWidth;
-            printGrid.height = printHeight;
+				// Convert to Data URL
+				const dataURL = printCanvas.toDataURL();
 
-            const photosPerRow = Math.floor((printWidth - margin) / (photoSize + margin));
-            const photosPerColumn = Math.floor((printHeight - margin) / (photoSize + margin));
-
-            const totalWidthUsed = photosPerRow * photoSize + (photosPerRow - 1) * margin;
-            const totalHeightUsed = photosPerColumn * photoSize + (photosPerColumn - 1) * margin;
-            const leftMargin = (printWidth - totalWidthUsed) / 2;
-            const topMargin = (printHeight - totalHeightUsed) / 2;
-
-            printCtx.fillStyle = 'white';
-            printCtx.fillRect(0, 0, printWidth, printHeight);
-
-            // Draw photos and lines around them
-            printCtx.strokeStyle = '#e0e0e0'; // Light gray color
-            printCtx.lineWidth = 1;
-
-            for (let i = 0; i < photosPerColumn; i++) {
-                for (let j = 0; j < photosPerRow; j++) {
-                    const x = leftMargin + j * (photoSize + margin);
-                    const y = topMargin + i * (photoSize + margin);
-
-                    // Draw the photo
-                    printCtx.drawImage(
-                        photoOutput,
-                        x,
-                        y,
-                        photoSize,
-                        photoSize
-                    );
-
-                    // Draw light thin lines around the photo
-                    printCtx.strokeRect(x, y, photoSize, photoSize);
-                }
-            }
-
-            printGrid.style.display = 'block';
-            downloadBtn.style.display = 'inline-block';
-        });
-
-        // Download the print grid
-        downloadBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'passport_photos.png';
-            link.href = printGrid.toDataURL();
-            link.click();
-        });
-    </script>
+				// Trigger download
+				const a = document.createElement('a');
+				a.href = dataURL;
+				a.download = '5x7-passport-photo.png';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+			};
+			img.src = previewElement.src;
+		});
+	</script>
 </body>
 
 </html>
